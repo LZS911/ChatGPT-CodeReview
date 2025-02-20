@@ -30,13 +30,13 @@ export class Chat {
       user: 'github-action-robot',
     });
 
-    log.info(res, res.data, 'dify 返回结果');
+    log.info(res, 'dify 返回结果');
 
     let result = '';
 
     try {
       // 处理流式响应
-      for await (const chunk of res.data) {
+      for await (const chunk of res.data.data) {
         const lines = chunk.toString('utf-8').split('\n').filter(Boolean);
 
         for (const line of lines) {
