@@ -41,8 +41,8 @@ export class Chat {
     try {
       // 处理流式响应
       for await (const chunk of res.data) {
-        log.info(chunk, 'chunk');
-        const lines = chunk.data.toString('utf-8').split('\n').filter(Boolean);
+        log.info(chunk.toString(), 'chunk');
+        const lines = chunk.toString('utf-8').split('\n').filter(Boolean);
         log.info(lines, 'lines');
 
         for (const line of lines) {
