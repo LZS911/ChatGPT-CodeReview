@@ -10,6 +10,7 @@ const MAX_PATCH_COUNT = process.env.MAX_PATCH_LENGTH
 
 export const robot = (app: Probot) => {
   const loadChat = async (context: Context) => {
+    log.info(process.env.DIFY_API_KEY);
     if (process.env.DIFY_API_KEY) {
       return new Chat(process.env.DIFY_API_KEY);
     }
@@ -47,7 +48,7 @@ export const robot = (app: Probot) => {
     async (context) => {
       const repo = context.repo();
       const chat = await loadChat(context);
-
+      log.info(chat);
       if (!chat) {
         log.info('Chat initialized failed');
         return 'no chat';
