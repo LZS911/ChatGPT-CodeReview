@@ -1,5 +1,4 @@
 import axios, { AxiosInstance } from 'axios';
-import log from 'loglevel';
 
 export class Chat {
   private server: AxiosInstance;
@@ -41,14 +40,14 @@ export class Chat {
     try {
       // 处理流式响应
       for await (const chunk of res.data) {
-        log.info(chunk.toString(), 'chunk');
         const lines = chunk.toString('utf-8').split('\n').filter(Boolean);
-        log.info(lines, 'lines');
 
         for (const line of lines) {
           try {
-            const data = JSON.parse(line);
-            log.info(data, '============data============');
+            const jsonStr = line.replace(/^data: /, '').trim();
+            if (!jsonStr) continue;
+
+            const data = JSON.parse(jsonStr);
             if (data.event === 'agent_message' && data.answer) {
               result += data.answer;
             }
