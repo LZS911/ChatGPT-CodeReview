@@ -157,6 +157,7 @@ export const robot = (app: Probot) => {
         }
         try {
           const res = await chat?.codeReview(patch);
+          log.info(patch, 'patch');
           if (!!res) {
             ress.push({
               path: file.filename,
@@ -168,6 +169,8 @@ export const robot = (app: Probot) => {
           log.info(`review ${file.filename} failed`, e);
         }
       }
+
+      log.info(ress, 'ress');
       try {
         await context.octokit.pulls.createReview({
           repo: repo.repo,

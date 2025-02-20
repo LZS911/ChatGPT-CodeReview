@@ -30,8 +30,6 @@ export class Chat {
       user: 'github-action-robot',
     });
 
-    log.info(res, 'dify 返回结果');
-
     let result = '';
 
     try {
@@ -55,6 +53,8 @@ export class Chat {
     }
 
     console.timeEnd('code-review cost');
+
+    log.info(result, 'result');
 
     return result;
   };
