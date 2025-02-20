@@ -157,7 +157,6 @@ export const robot = (app: Probot) => {
         }
         try {
           const res = await chat?.codeReview(patch);
-          log.info(patch, 'patch');
           if (!!res) {
             ress.push({
               path: file.filename,

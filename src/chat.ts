@@ -40,6 +40,7 @@ export class Chat {
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
+            log.info(data, '============data============');
             if (data.event === 'agent_message' && data.answer) {
               result += data.answer;
             }
@@ -53,8 +54,6 @@ export class Chat {
     }
 
     console.timeEnd('code-review cost');
-
-    log.info(result, 'result');
 
     return result;
   };
