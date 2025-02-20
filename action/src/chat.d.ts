@@ -1,7 +1,5 @@
 export declare class Chat {
-    private openai;
-    private isAzure;
+    private server;
     constructor(apikey: string);
-    private generatePrompt;
-    codeReview: (patch: string) => Promise<string | null>;
+    codeReview: (patch: string) => Promise<string>;
 }
