@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import log from 'loglevel';
 
 export class Chat {
   private server: AxiosInstance;
@@ -28,6 +29,8 @@ export class Chat {
       response_mode: 'streaming',
       user: 'github-action-robot',
     });
+
+    log.info(res, res.data, 'dify 返回结果');
 
     let result = '';
 
