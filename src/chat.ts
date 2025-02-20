@@ -21,21 +21,29 @@ export class Chat {
 
     console.time('code-review cost');
 
-    const res = await this.server.post('/v1/chat-messages', {
-      inputs: {
-        github_pull_request_patch: patch,
+    const res = await this.server.post(
+      '/v1/chat-messages',
+      {
+        inputs: {
+          github_pull_request_patch: patch,
+        },
+        query: '请生成代码变更复审建议',
+        response_mode: 'streaming',
+        user: 'github-action-robot',
       },
-      query: '请生成代码变更复审建议',
-      response_mode: 'streaming',
-      user: 'github-action-robot',
-    });
+      {
+        responseType: 'stream', // 添加这个配置来接收流数据
+      }
+    );
 
     let result = '';
 
     try {
       // 处理流式响应
-      for await (const chunk of res.data.data) {
-        const lines = chunk.toString('utf-8').split('\n').filter(Boolean);
+      for await (const chunk of res.data) {
+        log.info(chunk, 'chunk');
+        const lines = chunk.data.toString('utf-8').split('\n').filter(Boolean);
+        log.info(lines, 'lines');
 
         for (const line of lines) {
           try {
