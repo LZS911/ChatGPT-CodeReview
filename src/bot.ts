@@ -1,18 +1,17 @@
 import { Context, Probot } from 'probot';
-import { minimatch } from 'minimatch'
-
+import { minimatch } from 'minimatch';
 import { Chat } from './chat.js';
 import log from 'loglevel';
 
-const OPENAI_API_KEY = 'OPENAI_API_KEY';
+const DIFY_API_KEY = 'DIFY_API_KEY';
 const MAX_PATCH_COUNT = process.env.MAX_PATCH_LENGTH
   ? +process.env.MAX_PATCH_LENGTH
   : Infinity;
 
 export const robot = (app: Probot) => {
   const loadChat = async (context: Context) => {
-    if (process.env.OPENAI_API_KEY) {
-      return new Chat(process.env.OPENAI_API_KEY);
+    if (process.env.DIFY_API_KEY) {
+      return new Chat(process.env.DIFY_API_KEY);
     }
 
     const repo = context.repo();
@@ -23,7 +22,7 @@ export const robot = (app: Probot) => {
         {
           owner: repo.owner,
           repo: repo.repo,
-          name: OPENAI_API_KEY,
+          name: DIFY_API_KEY,
         }
       )) as any;
 
@@ -37,7 +36,7 @@ export const robot = (app: Probot) => {
         repo: repo.repo,
         owner: repo.owner,
         issue_number: context.pullRequest().pull_number,
-        body: `Seems you are using me but didn't get OPENAI_API_KEY seted in Variables/Secrets for this repo. you could follow [readme](https://github.com/anc95/ChatGPT-CodeReview) for more information`,
+        body: `Seems you are using me but didn't get DIFY_API_KEY seted in Variables/Secrets for this repo. you could follow [readme](https://github.com/anc95/ChatGPT-CodeReview) for more information`,
       });
       return null;
     }
@@ -58,10 +57,7 @@ export const robot = (app: Probot) => {
 
       log.debug('pull_request:', pull_request);
 
-      if (
-        pull_request.state === 'closed' ||
-        pull_request.locked
-      ) {
+      if (pull_request.state === 'closed' || pull_request.locked) {
         log.info('invalid event payload');
         return 'invalid event payload';
       }
@@ -85,9 +81,14 @@ export const robot = (app: Probot) => {
 
       let { files: changedFiles, commits } = data.data;
 
-      log.debug("compareCommits, base:", context.payload.pull_request.base.sha, "head:", context.payload.pull_request.head.sha)
-      log.debug("compareCommits.commits:", commits)
-      log.debug("compareCommits.files", changedFiles)
+      log.debug(
+        'compareCommits, base:',
+        context.payload.pull_request.base.sha,
+        'head:',
+        context.payload.pull_request.head.sha
+      );
+      log.debug('compareCommits.commits:', commits);
+      log.debug('compareCommits.files', changedFiles);
 
       if (context.payload.action === 'synchronize' && commits.length >= 2) {
         const {
@@ -99,37 +100,40 @@ export const robot = (app: Probot) => {
           head: commits[commits.length - 1].sha,
         });
 
-        changedFiles = files
+        changedFiles = files;
       }
 
       const ignoreList = (process.env.IGNORE || process.env.ignore || '')
-          .split('\n')
-          .filter((v) => v !== '');
-      const ignorePatterns = (process.env.IGNORE_PATTERNS || '').split(',').filter((v) => Boolean(v.trim()));
-      const includePatterns = (process.env.INCLUDE_PATTERNS || '').split(',').filter((v) => Boolean(v.trim()));
+        .split('\n')
+        .filter((v) => v !== '');
+      const ignorePatterns = (process.env.IGNORE_PATTERNS || '')
+        .split(',')
+        .filter((v) => Boolean(v.trim()));
+      const includePatterns = (process.env.INCLUDE_PATTERNS || '')
+        .split(',')
+        .filter((v) => Boolean(v.trim()));
 
       log.debug('ignoreList:', ignoreList);
       log.debug('ignorePatterns:', ignorePatterns);
 
-      changedFiles = changedFiles?.filter(
-        (file) => {
-          const url = new URL(file.contents_url)
-          // if includePatterns is not empty, only include files that match the pattern
-          if (includePatterns.length) {
-            return matchPatterns(includePatterns, url.pathname)
-          }
+      changedFiles = changedFiles?.filter((file) => {
+        const url = new URL(file.contents_url);
+        // if includePatterns is not empty, only include files that match the pattern
+        if (includePatterns.length) {
+          return matchPatterns(includePatterns, url.pathname);
+        }
 
-          if (ignoreList.includes(file.filename)) {
-            return false;
-          }
+        if (ignoreList.includes(file.filename)) {
+          return false;
+        }
 
-          // if ignorePatterns is not empty, ignore files that match the pattern
-          if (ignorePatterns.length) {
-            return !matchPatterns(ignorePatterns, url.pathname)
-          }
+        // if ignorePatterns is not empty, ignore files that match the pattern
+        if (ignorePatterns.length) {
+          return !matchPatterns(ignorePatterns, url.pathname);
+        }
 
-          return true
-      })
+        return true;
+      });
 
       if (!changedFiles?.length) {
         log.info('no change found');
@@ -149,9 +153,7 @@ export const robot = (app: Probot) => {
         }
 
         if (!patch || patch.length > MAX_PATCH_COUNT) {
-          log.info(
-            `${file.filename} skipped caused by its diff is too large`
-          );
+          log.info(`${file.filename} skipped caused by its diff is too large`);
           continue;
         }
         try {
@@ -161,7 +163,7 @@ export const robot = (app: Probot) => {
               path: file.filename,
               body: res,
               position: patch.split('\n').length - 1,
-            })
+            });
           }
         } catch (e) {
           log.info(`review ${file.filename} failed`, e);
@@ -172,7 +174,7 @@ export const robot = (app: Probot) => {
           repo: repo.repo,
           owner: repo.owner,
           pull_number: context.pullRequest().pull_number,
-          body: "Code review by ChatGPT",
+          body: 'Code review by ChatGPT',
           event: 'COMMENT',
           commit_id: commits[commits.length - 1].sha,
           comments: ress,
@@ -182,10 +184,7 @@ export const robot = (app: Probot) => {
       }
 
       console.timeEnd('gpt cost');
-      log.info(
-        'successfully reviewed',
-        context.payload.pull_request.html_url
-      );
+      log.info('successfully reviewed', context.payload.pull_request.html_url);
 
       return 'success';
     }
@@ -195,7 +194,14 @@ export const robot = (app: Probot) => {
 const matchPatterns = (patterns: string[], path: string) => {
   return patterns.some((pattern) => {
     try {
-      return minimatch(path, pattern.startsWith('/') ? "**" + pattern : pattern.startsWith("**") ? pattern : "**/" + pattern);
+      return minimatch(
+        path,
+        pattern.startsWith('/')
+          ? '**' + pattern
+          : pattern.startsWith('**')
+          ? pattern
+          : '**/' + pattern
+      );
     } catch {
       // if the pattern is not a valid glob pattern, try to match it as a regular expression
       try {
@@ -204,5 +210,5 @@ const matchPatterns = (patterns: string[], path: string) => {
         return false;
       }
     }
-  })
-}
+  });
+};

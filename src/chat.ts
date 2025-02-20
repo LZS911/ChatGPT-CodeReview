@@ -1,44 +1,17 @@
-import { OpenAI, AzureOpenAI } from 'openai';
+import axios, { AxiosInstance } from 'axios';
 
 export class Chat {
-  private openai: OpenAI | AzureOpenAI;
-  private isAzure: boolean;
+  private server: AxiosInstance;
 
   constructor(apikey: string) {
-    this.isAzure = Boolean(
-        process.env.AZURE_API_VERSION && process.env.AZURE_DEPLOYMENT,
-    );
-
-    if (this.isAzure) {
-      // Azure OpenAI configuration
-      this.openai = new AzureOpenAI({
-        apiKey: apikey,
-        endpoint: process.env.OPENAI_API_ENDPOINT || '',
-        apiVersion: process.env.AZURE_API_VERSION || '',
-        deployment: process.env.AZURE_DEPLOYMENT || '',
-      });
-    } else {
-      // Standard OpenAI configuration
-      this.openai = new OpenAI({
-        apiKey: apikey,
-        baseURL: process.env.OPENAI_API_ENDPOINT || 'https://api.openai.com/v1',
-      });
-    }
+    this.server = axios.create({
+      baseURL: process.env.DIFY_API_ENDPOINT || 'https://api.dify.ai',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apikey}`,
+      },
+    });
   }
-
-  private generatePrompt = (patch: string) => {
-    const answerLanguage = process.env.LANGUAGE
-        ? `Answer me in ${process.env.LANGUAGE},`
-        : '';
-
-    const prompt =
-        process.env.PROMPT ||
-        'Below is a code patch, please help me do a brief code review on it. Any bug risks and/or improvement suggestions are welcome:';
-
-    return `${prompt}, ${answerLanguage}:
-  ${patch}
-    `;
-  };
 
   public codeReview = async (patch: string) => {
     if (!patch) {
@@ -46,27 +19,40 @@ export class Chat {
     }
 
     console.time('code-review cost');
-    const prompt = this.generatePrompt(patch);
 
-    const res = await this.openai.chat.completions.create({
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      model: process.env.MODEL || 'gpt-4o-mini',
-      temperature: +(process.env.temperature || 0) || 1,
-      top_p: +(process.env.top_p || 0) || 1,
-      max_tokens: process.env.max_tokens ? +process.env.max_tokens : undefined,
+    const res = await this.server.post('/v1/chat-messages', {
+      inputs: {
+        github_pull_request_patch: patch,
+      },
+      query: '请生成代码变更复审建议',
+      response_mode: 'streaming',
+      user: 'github-action-robot',
     });
+
+    let result = '';
+
+    try {
+      // 处理流式响应
+      for await (const chunk of res.data) {
+        const lines = chunk.toString('utf-8').split('\n').filter(Boolean);
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.event === 'agent_message' && data.answer) {
+              result += data.answer;
+            }
+          } catch (e) {
+            console.error('Parse chunk failed:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Process stream failed:', e);
+    }
 
     console.timeEnd('code-review cost');
 
-    if (res.choices.length) {
-      return res.choices[0].message.content;
-    }
-
-    return '';
+    return result;
   };
 }
